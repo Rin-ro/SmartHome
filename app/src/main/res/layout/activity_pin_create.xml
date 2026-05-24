@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/street_facade1"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#8030CCE1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="30dp">
+        <ImageView
+            android:id="@+id/logoImageView"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_marginTop="30dp"
+            android:src="@drawable/logo1" />
+        <TextView
+            android:id="@+id/titleTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:text="Создайте пин-код"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/dotsLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+            <View
+                android:id="@+id/dot1"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/bg_dot_empty" />
+            <View
+                android:id="@+id/dot2"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/bg_dot_empty" />
+            <View
+                android:id="@+id/dot3"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/bg_dot_empty" />
+            <View
+                android:id="@+id/dot4"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:background="@drawable/bg_dot_empty" />
+        </LinearLayout>
+        <GridLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
+            android:columnCount="3"
+            android:rowCount="4"
+            android:alignmentMode="alignMargins"
+            android:useDefaultMargins="false">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn1"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="1"
+                app:backgroundTint="@null"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn2"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="2"
+                android:textColor="#000000"
+                app:backgroundTint="@null"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn3"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="3"
+                app:backgroundTint="@null"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn4"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="4"
+                android:textColor="#000000"
+                app:backgroundTint="@null"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn5"
+                android:layout_width="80dp"
+                app:backgroundTint="@null"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="5"
+                android:backgroundTint="@null"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn6"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="6"
+                app:backgroundTint="@null"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn7"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="7"
+                app:backgroundTint="@null"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn8"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="8"
+                app:backgroundTint="@null"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn9"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="9"
+                android:textColor="#000000"
+                app:backgroundTint="@null"
+                android:textSize="24sp" />
+
+            <View
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn0"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                app:backgroundTint="@null"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_button_rounded"
+                android:text="0"
+                android:textColor="#000000"
+                android:textSize="24sp" />
+
+            <View
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_margin="8dp" />
+        </GridLayout>
+    </LinearLayout>
+</LinearLayout>
