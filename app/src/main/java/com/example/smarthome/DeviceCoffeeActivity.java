@@ -1,33 +1,31 @@
 package com.example.smarthome;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Device;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import org.json.JSONObject;
 
 public class DeviceCoffeeActivity extends AppCompatActivity {
     private SwitchCompat switchCoffee;
     private SeekBar seekStrength, seekVolume;
     private TextView textStrength, textVolume, statusText;
     private int deviceId, roomId;
-    private Device currentDevice = new Device();
+    private SupabaseClient supabaseClient;
+    private JSONObject currentParameters = new JSONObject();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_coffee);
+        supabaseClient = SupabaseClient.getInstance();
         deviceId = getIntent().getIntExtra("device_id", -1);
         roomId = getIntent().getIntExtra("room_id", -1);
+        if (deviceId == -1 || roomId == -1) { finish(); return; }
         switchCoffee = findViewById(R.id.switchCoffee);
         seekStrength = findViewById(R.id.seekBarStrength);
         seekVolume = findViewById(R.id.seekBarVolume);
@@ -36,18 +34,12 @@ public class DeviceCoffeeActivity extends AppCompatActivity {
         statusText = findViewById(R.id.textCoffeeStatus);
         ImageView back = findViewById(R.id.btnBack);
         back.setOnClickListener(v -> finish());
-
         loadDeviceData();
-
-        switchCoffee.setOnCheckedChangeListener((btn, isChecked) -> {
-            currentDevice.is_on = isChecked;
-            statusText.setText(isChecked ? "Включено" : "Выключено");
-            updateDevice();
-        });
+        switchCoffee.setOnCheckedChangeListener((btn, isChecked) -> updateDeviceWork(isChecked));
         seekStrength.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 textStrength.setText(progress + "%");
-                if (fromUser) { currentDevice.strength = progress; updateDevice(); }
+                if (fromUser) { try { currentParameters.put("strength", progress); updateDeviceParameters(); } catch (Exception e) {} }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
@@ -55,47 +47,51 @@ public class DeviceCoffeeActivity extends AppCompatActivity {
         seekVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 textVolume.setText(progress + " мл");
-                if (fromUser) { currentDevice.volume = progress; updateDevice(); }
+                if (fromUser) { try { currentParameters.put("volume", progress); updateDeviceParameters(); } catch (Exception e) {} }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
     }
-
     private void loadDeviceData() {
-        SupabaseApi api = ApiClient.getApi();
-        api.getDevices(roomId).enqueue(new Callback<java.util.List<Device>>() {
-            @Override
-            public void onResponse(Call<java.util.List<Device>> call, Response<java.util.List<Device>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    for (Device d : response.body()) {
-                        if (d.id == deviceId) {
-                            currentDevice = d;
-                            switchCoffee.setChecked(d.is_on);
-                            statusText.setText(d.is_on ? "Включено" : "Выключено");
-                            seekStrength.setProgress(d.strength);
-                            textStrength.setText(d.strength + "%");
-                            seekVolume.setProgress(d.volume);
-                            textVolume.setText(d.volume + " мл");
-                            break;
+        supabaseClient.getDeviceById(String.valueOf(deviceId), new SupabaseClient.SupabaseCallback() {
+            @Override public void onSuccess(int code, String response) {
+                runOnUiThread(() -> {
+                    try {
+                        org.json.JSONArray arr = new org.json.JSONArray(response);
+                        if (arr.length() > 0) {
+                            org.json.JSONObject dev = arr.getJSONObject(0);
+                            boolean work = dev.getBoolean("work");
+                            String paramsStr = dev.getString("parameters");
+                            currentParameters = new org.json.JSONObject(paramsStr);
+                            int strength = currentParameters.optInt("strength", 50);
+                            int volume = currentParameters.optInt("volume", 200);
+                            switchCoffee.setChecked(work);
+                            statusText.setText(work ? "Включено" : "Выключено");
+                            seekStrength.setProgress(strength);
+                            textStrength.setText(strength + "%");
+                            seekVolume.setProgress(volume);
+                            textVolume.setText(volume + " мл");
                         }
-                    }
-                }
+                    } catch (Exception e) { e.printStackTrace(); }
+                });
             }
-            @Override public void onFailure(Call<java.util.List<Device>> call, Throwable t) { showError(); }
+            @Override public void onError(String error) { showError("Ошибка загрузки"); }
         });
     }
-
-    private void updateDevice() {
-        SupabaseApi api = ApiClient.getApi();
-        api.updateDevice(deviceId, currentDevice).enqueue(new Callback<Void>() {
-            @Override public void onResponse(Call<Void> call, Response<Void> response) { }
-            @Override public void onFailure(Call<Void> call, Throwable t) { showError(); }
+    private void updateDeviceWork(boolean isChecked) {
+        supabaseClient.updateDeviceWorkStatus(String.valueOf(deviceId), isChecked, new SupabaseClient.SupabaseCallback() {
+            @Override public void onSuccess(int code, String resp) { runOnUiThread(() -> statusText.setText(isChecked ? "Включено" : "Выключено")); }
+            @Override public void onError(String error) { runOnUiThread(() -> { switchCoffee.setChecked(!isChecked); showError("Не удалось изменить состояние"); }); }
         });
     }
-
-    private void showError() {
-        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage("Не удалось сохранить настройки")
-                .setPositiveButton("OK", null).setCancelable(false).show();
+    private void updateDeviceParameters() {
+        supabaseClient.updateDeviceParameters(String.valueOf(deviceId), currentParameters.toString(), new SupabaseClient.SupabaseCallback() {
+            @Override public void onSuccess(int code, String resp) { }
+            @Override public void onError(String error) { runOnUiThread(() -> showError("Не удалось сохранить параметры")); }
+        });
+    }
+    private void showError(String msg) {
+        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage(msg).setPositiveButton("OK", null).setCancelable(false).show();
     }
 }

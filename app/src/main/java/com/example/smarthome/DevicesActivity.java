@@ -1,63 +1,60 @@
 package com.example.smarthome;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import androidx.appcompat.app.AlertDialog;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Device;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class DevicesActivity extends AppCompatActivity {
-    private RecyclerView recyclerView;
-    private DeviceAdapter adapter;
-    private List<Device> devices = new ArrayList<>();
+    private SupabaseClient supabaseClient;
     private int roomId;
     private String roomName;
-    private SharedPreferences prefs;
+    private List<Device> deviceList;
+    private RecyclerView recyclerView;
+    private AllDeviceAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_devices);
-        prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
-        roomId = getIntent().getIntExtra("room_id", -1);
+        supabaseClient = SupabaseClient.getInstance();
+        roomId = getIntent().getIntExtra("idRoom", 0);
         roomName = getIntent().getStringExtra("room_name");
         TextView title = findViewById(R.id.textRoomName);
-        title.setText("Устройства в " + roomName);
+        title.setText("Устройства в " + (roomName == null ? "комнате" : roomName));
         recyclerView = findViewById(R.id.recyclerViewDevices);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new DeviceAdapter(devices, device -> {
-            if (device.type.equals("coffee")) {
-                Intent i = new Intent(this, DeviceCoffeeActivity.class);
-                i.putExtra("device_id", device.id);
+        deviceList = new ArrayList<>();
+        adapter = new AllDeviceAdapter(this, deviceList, position -> {
+            Device dev = deviceList.get(position);
+            if (dev.device_type_name.equals("Кофеварка")) {
+                Intent i = new Intent(DevicesActivity.this, DeviceCoffeeActivity.class);
+                i.putExtra("device_id", dev.device_id);
                 i.putExtra("room_id", roomId);
                 startActivity(i);
-            } else if (device.type.equals("dishwasher")) {
-                Intent i = new Intent(this, DeviceDishwasherActivity.class);
-                i.putExtra("device_id", device.id);
+            } else if (dev.device_type_name.equals("Посудомоечная машина")) {
+                Intent i = new Intent(DevicesActivity.this, DeviceDishwasherActivity.class);
+                i.putExtra("device_id", dev.device_id);
                 i.putExtra("room_id", roomId);
                 startActivity(i);
             }
-        }, (device, isChecked) -> updateDeviceState(device, isChecked));
+        });
         recyclerView.setAdapter(adapter);
-
         ImageView btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
-        FloatingActionButton fab = findViewById(R.id.fabAddDevice);
-        fab.setOnClickListener(v -> {
-            Intent i = new Intent(this, AddDeviceActivity.class);
+        FloatingActionButton fabAddDevice = findViewById(R.id.fabAddDevice);
+        fabAddDevice.setOnClickListener(v -> {
+            Intent i = new Intent(DevicesActivity.this, AddDeviceActivity.class);
             i.putExtra("room_id", roomId);
             startActivity(i);
         });
@@ -65,40 +62,34 @@ public class DevicesActivity extends AppCompatActivity {
     }
 
     private void loadDevices() {
-        SupabaseApi api = ApiClient.getApi();
-        api.getDevices(roomId).enqueue(new Callback<List<Device>>() {
+        supabaseClient.getDevicesByRoomIdWithType(String.valueOf(roomId), new SupabaseClient.SupabaseCallback() {
             @Override
-            public void onResponse(Call<List<Device>> call, Response<List<Device>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    devices.clear();
-                    devices.addAll(response.body());
-                    adapter.notifyDataSetChanged();
-                }
+            public void onSuccess(int responseCode, String response) {
+                runOnUiThread(() -> {
+                    try {
+                        deviceList.clear();
+                        if (response != null && response.length() > 3) {
+                            JSONArray arr = new JSONArray(response);
+                            for (int i = 0; i < arr.length(); i++) {
+                                JSONObject obj = arr.getJSONObject(i);
+                                Device d = new Device();
+                                d.device_id = obj.getInt("device_id");
+                                d.parameters = obj.getString("parameters");
+                                d.device_work = obj.getBoolean("work");
+                                JSONObject type = obj.getJSONObject("device_types");
+                                d.device_type_name = type.getString("device_name_type");
+                                d.device_image = type.getInt("device_image_type");
+                                deviceList.add(d);
+                            }
+                            adapter.notifyDataSetChanged();
+                        }
+                    } catch (Exception e) { e.printStackTrace(); }
+                });
             }
             @Override
-            public void onFailure(Call<List<Device>> call, Throwable t) {
-                showError("Ошибка загрузки устройств");
+            public void onError(String error) {
+                runOnUiThread(() -> Toast.makeText(DevicesActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show());
             }
         });
-    }
-
-    private void updateDeviceState(Device device, boolean isOn) {
-        device.is_on = isOn;
-        SupabaseApi api = ApiClient.getApi();
-        api.updateDevice(device.id, device).enqueue(new Callback<Void>() {
-            @Override public void onResponse(Call<Void> call, Response<Void> response) { }
-            @Override public void onFailure(Call<Void> call, Throwable t) { showError("Не удалось изменить состояние"); }
-        });
-    }
-
-    private void showError(String msg) {
-        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage(msg)
-                .setPositiveButton("OK", null).setCancelable(false).show();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadDevices();
     }
 }

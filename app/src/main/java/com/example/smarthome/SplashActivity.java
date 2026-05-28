@@ -12,12 +12,14 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
         SharedPreferences prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
+        String userId = prefs.getString("user_id", "-1");
         boolean hasPin = prefs.contains("pin_code");
+
         new Handler().postDelayed(() -> {
-            if (hasPin) {
-                startActivity(new Intent(this, PinLoginActivity.class));
+            if (hasPin && !userId.equals("-1")) {
+                startActivity(new Intent(SplashActivity.this, PinLoginActivity.class));
             } else {
-                startActivity(new Intent(this, AuthActivity.class));
+                startActivity(new Intent(SplashActivity.this, AuthActivity.class));
             }
             finish();
         }, 2000);

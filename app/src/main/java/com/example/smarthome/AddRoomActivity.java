@@ -1,107 +1,82 @@
 package com.example.smarthome;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Room;
 import com.google.android.material.button.MaterialButton;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import org.json.JSONObject;
 
 public class AddRoomActivity extends AppCompatActivity {
-    private EditText editRoomName;
-    private MaterialButton btnLiving, btnKitchen, btnBathroom, btnOther;
-    private String selectedType = "Гостиная";
-    private SharedPreferences prefs;
+    private SupabaseClient supabaseClient;
+    private String userId;
+    private int selectedTypeId = -1;
+    private EditText roomNameEdit;
+    private MaterialButton btnLiving, btnKitchen, btnBathroom, btnStudy, btnBedroom, btnHall, btnOther;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_room);
-        prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
-        editRoomName = findViewById(R.id.editRoomName);
+        supabaseClient = SupabaseClient.getInstance();
+        SharedPreferences prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
+        userId = prefs.getString("user_id", "");
+        roomNameEdit = findViewById(R.id.editRoomName);
         btnLiving = findViewById(R.id.btnLiving);
         btnKitchen = findViewById(R.id.btnKitchen);
         btnBathroom = findViewById(R.id.btnBathroom);
+        btnStudy = findViewById(R.id.btnStudy);
+        btnBedroom = findViewById(R.id.btnBedroom);
+        btnHall = findViewById(R.id.btnHall);
         btnOther = findViewById(R.id.btnOther);
-        MaterialButton btnSave = findViewById(R.id.btnSaveRoom);
+        btnLiving.setOnClickListener(v -> selectRoomType(btnLiving, 1));
+        btnKitchen.setOnClickListener(v -> selectRoomType(btnKitchen, 2));
+        btnBathroom.setOnClickListener(v -> selectRoomType(btnBathroom, 3));
+        btnStudy.setOnClickListener(v -> selectRoomType(btnStudy, 4));
+        btnBedroom.setOnClickListener(v -> selectRoomType(btnBedroom, 5));
+        btnHall.setOnClickListener(v -> selectRoomType(btnHall, 6));
+        btnOther.setOnClickListener(v -> selectRoomType(btnOther, 7));
+        selectRoomType(btnLiving, 1);
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
-
-        btnLiving.setOnClickListener(v -> setSelected(btnLiving, "Гостиная"));
-        btnKitchen.setOnClickListener(v -> setSelected(btnKitchen, "Кухня"));
-        btnBathroom.setOnClickListener(v -> setSelected(btnBathroom, "Ванная"));
-        btnOther.setOnClickListener(v -> startActivityForResult(new Intent(this, AddCategoryActivity.class), 1));
-
-        btnSave.setOnClickListener(v -> {
-            String name = editRoomName.getText().toString().trim();
-            if (name.isEmpty()) {
-                Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            name = name.substring(0,1).toUpperCase() + name.substring(1).toLowerCase();
-            saveRoom(name, selectedType);
-        });
+        findViewById(R.id.btnSaveRoom).setOnClickListener(v -> saveRoom());
     }
-
-    private void setSelected(MaterialButton btn, String type) {
-        resetButtons();
-        btn.setBackgroundTintList(getColorStateList(R.color.blue_selected));
-        selectedType = type;
+    private void selectRoomType(MaterialButton selectedButton, int typeId) {
+        resetButtonBackgrounds();
+        selectedButton.setBackgroundTintList(getColorStateList(R.color.blue_selected));
+        selectedTypeId = typeId;
     }
-
-    private void resetButtons() {
-        int def = getColor(R.color.gray_button);
-        btnLiving.setBackgroundTintList(getColorStateList(def));
-        btnKitchen.setBackgroundTintList(getColorStateList(def));
-        btnBathroom.setBackgroundTintList(getColorStateList(def));
-        if (btnOther != null) btnOther.setBackgroundTintList(getColorStateList(def));
+    private void resetButtonBackgrounds() {
+        btnLiving.setBackgroundTintList(getColorStateList(R.color.gray_button));
+        btnKitchen.setBackgroundTintList(getColorStateList(R.color.gray_button));
+        btnBathroom.setBackgroundTintList(getColorStateList(R.color.gray_button));
+        btnStudy.setBackgroundTintList(getColorStateList(R.color.gray_button));
+        btnBedroom.setBackgroundTintList(getColorStateList(R.color.gray_button));
+        btnHall.setBackgroundTintList(getColorStateList(R.color.gray_button));
+        btnOther.setBackgroundTintList(getColorStateList(R.color.gray_button));
     }
-
-    private void saveRoom(String name, String type) {
-        String userId = prefs.getString("user_id", "");
-        Room room = new Room();
-        room.user_id = userId;
-        room.name = name;
-        room.type = type;
-        SupabaseApi api = ApiClient.getApi();
-        api.addRoom(room).enqueue(new Callback<Room>() {
-            @Override
-            public void onResponse(Call<Room> call, Response<Room> response) {
-                if (response.isSuccessful()) {
-                    finish();
-                } else {
-                    showError("Ошибка добавления комнаты");
+    private void saveRoom() {
+        String roomName = roomNameEdit.getText().toString().trim();
+        if (roomName.isEmpty()) { Toast.makeText(this, "Введите название", Toast.LENGTH_SHORT).show(); return; }
+        if (selectedTypeId == -1) { Toast.makeText(this, "Выберите тип", Toast.LENGTH_SHORT).show(); return; }
+        roomName = roomName.substring(0,1).toUpperCase() + roomName.substring(1).toLowerCase();
+        try {
+            JSONObject room = new JSONObject();
+            room.put("user_id", userId);
+            room.put("name_room", roomName);
+            room.put("type_id", selectedTypeId);
+            supabaseClient.addRoom(room, new SupabaseClient.SupabaseCallback() {
+                @Override public void onSuccess(int code, String resp) {
+                    runOnUiThread(() -> {
+                        if (code == 201) { Toast.makeText(AddRoomActivity.this, "Комната добавлена", Toast.LENGTH_SHORT).show(); finish(); }
+                        else Toast.makeText(AddRoomActivity.this, "Ошибка", Toast.LENGTH_SHORT).show();
+                    });
                 }
-            }
-            @Override
-            public void onFailure(Call<Room> call, Throwable t) {
-                showError("Нет соединения");
-            }
-        });
-    }
-
-    private void showError(String msg) {
-        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage(msg)
-                .setPositiveButton("OK", null).setCancelable(false).show();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
-            String newCat = data.getStringExtra("category");
-            if (newCat != null) {
-                // можно обновить список выбора, но для простоты просто устанавливаем её как выбранную
-                selectedType = newCat;
-                Toast.makeText(this, "Выбрано: " + newCat, Toast.LENGTH_SHORT).show();
-            }
-        }
+                @Override public void onError(String error) {
+                    runOnUiThread(() -> Toast.makeText(AddRoomActivity.this, "Ошибка: "+error, Toast.LENGTH_SHORT).show());
+                }
+            });
+        } catch (Exception e) { e.printStackTrace(); }
     }
 }

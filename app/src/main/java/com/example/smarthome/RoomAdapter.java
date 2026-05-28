@@ -1,48 +1,62 @@
 package com.example.smarthome;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import com.example.smarthome.models.Room;
 import java.util.List;
 
 public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder> {
-    private List<Room> rooms;
-    private OnRoomClickListener listener;
 
-    public interface OnRoomClickListener {
-        void onRoomClick(Room room);
+    private List<Room> roomList;
+    private OnItemClickListener listener;
+    private LayoutInflater inflater;
+
+    public interface OnItemClickListener {
+        void onItemClick(int position);
     }
 
-    public RoomAdapter(List<Room> rooms, OnRoomClickListener listener) {
-        this.rooms = rooms;
+    public RoomAdapter(Context context, List<Room> roomList, OnItemClickListener listener) {
+        this.roomList = roomList;
         this.listener = listener;
+        this.inflater = LayoutInflater.from(context);
     }
 
-    @NonNull @Override
+    @NonNull
+    @Override
     public RoomViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_room, parent, false);
+        View view = inflater.inflate(R.layout.item_room, parent, false);
         return new RoomViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull RoomViewHolder holder, int position) {
-        Room room = rooms.get(position);
-        holder.name.setText(room.name);
-        holder.itemView.setOnClickListener(v -> listener.onRoomClick(room));
+        Room room = roomList.get(position);
+        holder.roomName.setText(room.name_room);
+        // Установка иконки – у вас в item_room используется kitchen_blue1, можно динамически менять
+        // holder.roomIcon.setImageResource(getIconForRoomType(room.image_room));
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onItemClick(position);
+        });
     }
 
     @Override
-    public int getItemCount() { return rooms.size(); }
+    public int getItemCount() {
+        return roomList.size();
+    }
 
     static class RoomViewHolder extends RecyclerView.ViewHolder {
-        TextView name;
+        ImageView roomIcon;
+        TextView roomName;
+
         RoomViewHolder(@NonNull View itemView) {
             super(itemView);
-            name = itemView.findViewById(R.id.roomNameTextView);
+            roomIcon = itemView.findViewById(R.id.roomIconImageView);
+            roomName = itemView.findViewById(R.id.roomNameTextView);
         }
     }
 }

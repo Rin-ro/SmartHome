@@ -5,59 +5,54 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
-import androidx.appcompat.app.AlertDialog;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Profile;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class AddAddressActivity extends AppCompatActivity {
-    private EditText editAddress;
+
+    private EditText addressEdit;
+    private SupabaseClient supabaseClient;
     private SharedPreferences prefs;
+    private String userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_address);
-        prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
-        editAddress = findViewById(R.id.editAddress);
-        Button btnSave = findViewById(R.id.btnSaveAddress);
 
-        btnSave.setOnClickListener(v -> {
-            String address = editAddress.getText().toString().trim();
-            if (address.isEmpty()) {
-                showError("Введите адрес");
-                return;
-            }
-            String userId = prefs.getString("user_id", "");
-            SupabaseApi api = ApiClient.getApi();
-            Profile profile = new Profile();
-            profile.id = userId;
-            profile.address = address;
-            // остальные поля не обновляем
-            api.upsertProfile(profile).enqueue(new Callback<Void>() {
-                @Override
-                public void onResponse(Call<Void> call, Response<Void> response) {
-                    if (response.isSuccessful()) {
+        supabaseClient = SupabaseClient.getInstance();
+        prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
+        userId = prefs.getString("user_id", "");
+
+        addressEdit = findViewById(R.id.editAddress);
+        Button saveBtn = findViewById(R.id.btnSaveAddress);
+        saveBtn.setOnClickListener(v -> saveAddress());
+    }
+
+    private void saveAddress() {
+        String address = addressEdit.getText().toString().trim();
+        if (address.isEmpty()) {
+            Toast.makeText(this, "Введите адрес", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        supabaseClient.updateUserAddress(userId, address, new SupabaseClient.SupabaseCallback() {
+            @Override
+            public void onSuccess(int responseCode, String response) {
+                runOnUiThread(() -> {
+                    if (responseCode == 200 || responseCode == 204) {
+                        prefs.edit().putString("user_address", address).apply();
                         startActivity(new Intent(AddAddressActivity.this, MainActivity.class));
                         finish();
                     } else {
-                        showError("Не удалось сохранить адрес");
+                        Toast.makeText(AddAddressActivity.this, "Не удалось сохранить адрес", Toast.LENGTH_SHORT).show();
                     }
-                }
-                @Override
-                public void onFailure(Call<Void> call, Throwable t) {
-                    showError("Нет соединения с сервером");
-                }
-            });
-        });
-    }
+                });
+            }
 
-    private void showError(String msg) {
-        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage(msg)
-                .setPositiveButton("OK", null).setCancelable(false).show();
+            @Override
+            public void onError(String error) {
+                runOnUiThread(() -> Toast.makeText(AddAddressActivity.this, "Ошибка: " + error, Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 }

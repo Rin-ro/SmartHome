@@ -1,125 +1,70 @@
 package com.example.smarthome;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import com.bumptech.glide.Glide;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Profile;
-import java.util.List;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import com.google.android.material.button.MaterialButton;
+import org.json.JSONObject;
 
 public class ProfileActivity extends AppCompatActivity {
-    private EditText editUsername, editEmail, editAddress;
-    private ImageView imgProfile;
-    private SharedPreferences prefs;
+    private EditText nameEdit, emailEdit, addressEdit;
+    private SupabaseClient supabaseClient;
     private String userId;
-    private Uri selectedAvatarUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
-        prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
+        supabaseClient = SupabaseClient.getInstance();
+        SharedPreferences prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
         userId = prefs.getString("user_id", "");
-        editUsername = findViewById(R.id.editUsername);
-        editEmail = findViewById(R.id.editEmail);
-        editAddress = findViewById(R.id.editAddress);
-        imgProfile = findViewById(R.id.imgProfile);
-        Button btnSave = findViewById(R.id.btnSave);
-        Button btnLogout = findViewById(R.id.btnLogout);
-        ImageView btnBack = findViewById(R.id.btnBack);
-
-        loadProfile();
-
-        imgProfile.setOnClickListener(v -> openGallery());
-        btnBack.setOnClickListener(v -> finish());
+        nameEdit = findViewById(R.id.editUsername);
+        emailEdit = findViewById(R.id.editEmail);
+        addressEdit = findViewById(R.id.editAddress);
+        nameEdit.setText(prefs.getString("user_name", ""));
+        emailEdit.setText(prefs.getString("user_email", ""));
+        addressEdit.setText(prefs.getString("user_address", ""));
+        MaterialButton btnSave = findViewById(R.id.btnSave);
         btnSave.setOnClickListener(v -> saveProfile());
+        MaterialButton btnLogout = findViewById(R.id.btnLogout);
         btnLogout.setOnClickListener(v -> logout());
+        ImageView btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
     }
-
-    private void loadProfile() {
-        SupabaseApi api = ApiClient.getApi();
-        api.getProfile(userId).enqueue(new Callback<List<Profile>>() {
-            @Override
-            public void onResponse(Call<List<Profile>> call, Response<List<Profile>> response) {
-                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
-                    Profile p = response.body().get(0);
-                    editUsername.setText(p.username);
-                    editEmail.setText(p.email);
-                    editAddress.setText(p.address);
-                    if (p.avatar_url != null && !p.avatar_url.isEmpty()) {
-                        Glide.with(ProfileActivity.this).load(p.avatar_url).into(imgProfile);
-                    }
-                }
-            }
-            @Override
-            public void onFailure(Call<List<Profile>> call, Throwable t) { showError("Ошибка загрузки профиля"); }
-        });
-    }
-
     private void saveProfile() {
-        String username = editUsername.getText().toString().trim();
-        String email = editEmail.getText().toString().trim();
-        String address = editAddress.getText().toString().trim();
-        if (username.isEmpty() || email.isEmpty() || address.isEmpty()) {
-            Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Profile profile = new Profile();
-        profile.id = userId;
-        profile.username = username;
-        profile.email = email;
-        profile.address = address;
-        // avatar_url пока не обновляем (для простоты)
-        SupabaseApi api = ApiClient.getApi();
-        api.upsertProfile(profile).enqueue(new Callback<Void>() {
-            @Override public void onResponse(Call<Void> call, Response<Void> response) {
-                Toast.makeText(ProfileActivity.this, "Сохранено", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-            @Override public void onFailure(Call<Void> call, Throwable t) { showError("Ошибка сохранения"); }
-        });
-    }
-
-    private void logout() {
-        prefs.edit().clear().apply();
-        ApiClient.setAuthToken(null);
-        startActivity(new Intent(this, AuthActivity.class));
-        finish();
-    }
-
-    private void openGallery() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        galleryLauncher.launch(intent);
-    }
-
-    private final ActivityResultLauncher<Intent> galleryLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    selectedAvatarUri = result.getData().getData();
-                    imgProfile.setImageURI(selectedAvatarUri);
-                    // Здесь можно загрузить файл в Supabase Storage, но для краткости опускаем
+        String name = nameEdit.getText().toString().trim();
+        String email = emailEdit.getText().toString().trim();
+        String address = addressEdit.getText().toString().trim();
+        if (name.isEmpty() || email.isEmpty()) { Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show(); return; }
+        try {
+            JSONObject data = new JSONObject();
+            data.put("name", name);
+            data.put("email", email);
+            data.put("address", address);
+            supabaseClient.updateUserProfile(userId, data, new SupabaseClient.SupabaseCallback() {
+                @Override public void onSuccess(int code, String resp) {
+                    runOnUiThread(() -> {
+                        if (code == 200 || code == 204) {
+                            SharedPreferences prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
+                            prefs.edit().putString("user_name", name).putString("user_email", email).putString("user_address", address).apply();
+                            Toast.makeText(ProfileActivity.this, "Сохранено", Toast.LENGTH_SHORT).show();
+                            finish();
+                        } else Toast.makeText(ProfileActivity.this, "Ошибка", Toast.LENGTH_SHORT).show();
+                    });
+                }
+                @Override public void onError(String error) {
+                    runOnUiThread(() -> Toast.makeText(ProfileActivity.this, "Ошибка: "+error, Toast.LENGTH_SHORT).show());
                 }
             });
-
-    private void showError(String msg) {
-        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage(msg)
-                .setPositiveButton("OK", null).setCancelable(false).show();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+    private void logout() {
+        getSharedPreferences("smart_home_prefs", MODE_PRIVATE).edit().clear().apply();
+        startActivity(new Intent(this, AuthActivity.class));
+        finish();
     }
 }

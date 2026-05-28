@@ -6,124 +6,75 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Device;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AddDeviceActivity extends AppCompatActivity {
-
-    private EditText editDeviceName, editDeviceId;
-    private MaterialButton btnCoffee, btnDishwasher;
-    private String selectedDeviceType = "coffee";   // "coffee" или "dishwasher"
-    private SharedPreferences prefs;
+    private SupabaseClient supabaseClient;
     private int roomId;
+    private EditText editDeviceName, editDeviceId;
+    private RecyclerView recyclerView;
+    private DeviceTypeAdapter adapter;
+    private List<DeviceTypes> deviceTypesList;
+    private int selectedDeviceTypeId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_device);
-
-        prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
-        roomId = getIntent().getIntExtra("room_id", -1);
-        if (roomId == -1) {
-            finish();
-            return;
-        }
-
+        supabaseClient = SupabaseClient.getInstance();
+        roomId = getIntent().getIntExtra("room_id", 0);
+        if (roomId == 0) { Toast.makeText(this, "Ошибка: комната не указана", Toast.LENGTH_SHORT).show(); finish(); return; }
         editDeviceName = findViewById(R.id.editDeviceName);
         editDeviceId = findViewById(R.id.editDeviceId);
-        btnCoffee = findViewById(R.id.btnLight);      // используем существующие id
-        btnDishwasher = findViewById(R.id.btnAC);
-        MaterialButton btnSave = findViewById(R.id.btnSaveAddress);
-
-        // скрываем ненужные кнопки
-        findViewById(R.id.btnHood).setVisibility(View.GONE);
-        findViewById(R.id.btnTemp).setVisibility(View.GONE);
-        findViewById(R.id.btnFan).setVisibility(View.GONE);
-
-        btnCoffee.setText("Кофеварка");
-        btnDishwasher.setText("Посудомойка");
-
+        recyclerView = findViewById(R.id.listDevice);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        deviceTypesList = new ArrayList<>();
+        deviceTypesList.add(new DeviceTypes("Кофеварка", 1));
+        deviceTypesList.add(new DeviceTypes("Посудомоечная машина", 2));
+        adapter = new DeviceTypeAdapter(deviceTypesList, position -> {
+            selectedDeviceTypeId = deviceTypesList.get(position).image;
+        });
+        recyclerView.setAdapter(adapter);
+        MaterialButton btnSave = findViewById(R.id.btnSaveDevice);
+        btnSave.setOnClickListener(v -> saveDevice());
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
-
-        View.OnClickListener typeListener = v -> {
-            resetButtonsBackground();
-            MaterialButton btn = (MaterialButton) v;
-            btn.setBackgroundTintList(getColorStateList(R.color.blue_selected));
-            if (btn.getText().toString().equals("Кофеварка")) {
-                selectedDeviceType = "coffee";
-            } else {
-                selectedDeviceType = "dishwasher";
-            }
-        };
-        btnCoffee.setOnClickListener(typeListener);
-        btnDishwasher.setOnClickListener(typeListener);
-
-        btnSave.setOnClickListener(v -> {
-            String name = editDeviceName.getText().toString().trim();
-            String uid = editDeviceId.getText().toString().trim();
-            if (name.isEmpty() || uid.isEmpty()) {
-                Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            name = name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
-            saveDeviceToSupabase(name, uid);
-        });
     }
-
-    private void saveDeviceToSupabase(String name, String deviceUid) {
-        Device device = new Device();
-        device.room_id = roomId;
-        device.name = name;
-        device.device_uid = deviceUid;
-        device.type = selectedDeviceType;
-        device.is_on = false;
-
-        // начальные параметры в зависимости от типа
-        if (selectedDeviceType.equals("coffee")) {
-            device.strength = 50;
-            device.volume = 200;
-        } else {
-            device.mode = 50;
-            device.temperature = 50;
-        }
-
-        SupabaseApi api = ApiClient.getApi();
-        api.addDevice(device).enqueue(new Callback<Device>() {
-            @Override
-            public void onResponse(Call<Device> call, Response<Device> response) {
-                if (response.isSuccessful()) {
-                    Toast.makeText(AddDeviceActivity.this, "Устройство добавлено", Toast.LENGTH_SHORT).show();
-                    finish();
-                } else {
-                    showError("Ошибка добавления устройства");
+    private void saveDevice() {
+        String deviceName = editDeviceName.getText().toString().trim();
+        String deviceUid = editDeviceId.getText().toString().trim();
+        if (deviceName.isEmpty() || deviceUid.isEmpty()) { Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show(); return; }
+        if (selectedDeviceTypeId == -1) { Toast.makeText(this, "Выберите тип", Toast.LENGTH_SHORT).show(); return; }
+        deviceName = deviceName.substring(0,1).toUpperCase() + deviceName.substring(1).toLowerCase();
+        String parameters = "";
+        try {
+            JSONObject params = new JSONObject();
+            if (selectedDeviceTypeId == 1) { params.put("strength", 50); params.put("volume", 200); }
+            else { params.put("mode", 50); params.put("temperature", 50); }
+            parameters = params.toString();
+        } catch (Exception e) { e.printStackTrace(); }
+        try {
+            JSONObject device = new JSONObject();
+            device.put("room_id", roomId);
+            device.put("device_type_id", selectedDeviceTypeId);
+            device.put("work", false);
+            device.put("parameters", parameters);
+            supabaseClient.addDevice(device, new SupabaseClient.SupabaseCallback() {
+                @Override public void onSuccess(int code, String resp) {
+                    runOnUiThread(() -> {
+                        if (code == 201) { Toast.makeText(AddDeviceActivity.this, "Устройство добавлено", Toast.LENGTH_SHORT).show(); finish(); }
+                        else Toast.makeText(AddDeviceActivity.this, "Ошибка", Toast.LENGTH_SHORT).show();
+                    });
                 }
-            }
-            @Override
-            public void onFailure(Call<Device> call, Throwable t) {
-                showError("Нет соединения с сервером");
-            }
-        });
-    }
-
-    private void resetButtonsBackground() {
-        int defaultColor = getColor(R.color.gray_button);
-        btnCoffee.setBackgroundTintList(getColorStateList(defaultColor));
-        btnDishwasher.setBackgroundTintList(getColorStateList(defaultColor));
-    }
-
-    private void showError(String msg) {
-        new AlertDialog.Builder(this)
-                .setTitle("Ошибка")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .setCancelable(false)
-                .show();
+                @Override public void onError(String error) {
+                    runOnUiThread(() -> Toast.makeText(AddDeviceActivity.this, "Ошибка: "+error, Toast.LENGTH_SHORT).show());
+                }
+            });
+        } catch (Exception e) { e.printStackTrace(); }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.smarthome.api;
 
+import com.example.smarthome.Device;
+import com.example.smarthome.Room;
 import com.example.smarthome.models.*;
 import retrofit2.Call;
 import retrofit2.http.*;
@@ -18,8 +20,12 @@ public interface SupabaseApi {
     @GET("rest/v1/profiles")
     Call<List<Profile>> getProfile(@Query("id") String userId);
 
-    @PUT("rest/v1/profiles")
-    Call<Void> upsertProfile(@Body Profile profile);
+    @POST("rest/v1/profiles")
+    Call<Void> insertProfile(@Body Profile profile);
+
+    // Удалите или закомментируйте старый метод upsertProfile (или оставьте, но не используйте)
+    @PATCH("rest/v1/profiles")
+    Call<Void> updateProfile(@Query("id") String userId, @Body Profile profile);
 
     // Rooms
     @GET("rest/v1/rooms")

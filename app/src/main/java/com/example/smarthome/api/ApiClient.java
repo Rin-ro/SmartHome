@@ -1,18 +1,28 @@
 package com.example.smarthome.api;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
-    private static final String BASE_URL = "https://ВАШ_ПРОЕКТ.supabase.co/"; // ЗАМЕНИТЕ
-    private static final String API_KEY = "ВАШ_ANON_KEY";                     // ЗАМЕНИТЕ
+    // Уберите /rest/v1/ в конце!
+    private static final String BASE_URL = "https://mukanzegpteswadvptut.supabase.co/";
+    private static final String API_KEY = "sb_publishable_4iCq_7_wFxhIJYmiL8z9Ug_6RxDT7R4";
+
     private static Retrofit retrofit = null;
     private static String authToken = null;
 
     public static void setAuthToken(String token) {
         authToken = token;
+    }
+
+    public static void loadTokenFromPrefs(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences("smart_home_prefs", Context.MODE_PRIVATE);
+        String token = prefs.getString("access_token", null);
+        if (token != null) setAuthToken(token);
     }
 
     public static SupabaseApi getApi() {

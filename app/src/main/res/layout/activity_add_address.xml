@@ -31,7 +31,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Добавьте адрес своего дома в формате г. Название города, ул. Название улицы, д. Номер дома"
+            android:text="Добавьте адрес своего дома в формате г. Название города, ул. Название улицы, д. Номер дома, кв. Номер квартиры"
             android:textSize="20sp"
             android:textColor="#000000"
             android:textStyle="bold"

@@ -7,30 +7,24 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import com.example.smarthome.api.ApiClient;
-import com.example.smarthome.api.SupabaseApi;
-import com.example.smarthome.models.Device;
-import java.util.List;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import org.json.JSONObject;
 
 public class DeviceDishwasherActivity extends AppCompatActivity {
-
     private SwitchCompat switchDishwasher;
     private SeekBar seekBarMode, seekBarTemp;
     private TextView textModeValue, textTempValue, textDishwasherStatus;
     private int deviceId, roomId;
-    private Device currentDevice = new Device();
+    private SupabaseClient supabaseClient;
+    private JSONObject currentParameters = new JSONObject();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_dishwasher);
-
+        supabaseClient = SupabaseClient.getInstance();
         deviceId = getIntent().getIntExtra("device_id", -1);
         roomId = getIntent().getIntExtra("room_id", -1);
-
+        if (deviceId == -1 || roomId == -1) { finish(); return; }
         switchDishwasher = findViewById(R.id.switchDishwasher);
         seekBarMode = findViewById(R.id.seekBarMode);
         seekBarTemp = findViewById(R.id.seekBarTemp);
@@ -38,97 +32,66 @@ public class DeviceDishwasherActivity extends AppCompatActivity {
         textTempValue = findViewById(R.id.textTempValue);
         textDishwasherStatus = findViewById(R.id.textDishwasherStatus);
         ImageView btnBack = findViewById(R.id.btnBack);
-
         btnBack.setOnClickListener(v -> finish());
-
         loadDeviceData();
-
-        switchDishwasher.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            currentDevice.is_on = isChecked;
-            textDishwasherStatus.setText(isChecked ? "Включено" : "Выключено");
-            updateDevice();
-        });
-
+        switchDishwasher.setOnCheckedChangeListener((btn, isChecked) -> updateDeviceWork(isChecked));
         seekBarMode.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                String mode;
-                if (progress < 33) mode = "Экономичный";
-                else if (progress < 66) mode = "Стандартный";
-                else mode = "Интенсивный";
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                String mode = progress < 33 ? "Экономичный" : (progress < 66 ? "Стандартный" : "Интенсивный");
                 textModeValue.setText(mode);
-                if (fromUser) {
-                    currentDevice.mode = progress;
-                    updateDevice();
-                }
+                if (fromUser) { try { currentParameters.put("mode", progress); updateDeviceParameters(); } catch (Exception e) {} }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-
         seekBarTemp.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 textTempValue.setText(progress + "°C");
-                if (fromUser) {
-                    currentDevice.temperature = progress;
-                    updateDevice();
-                }
+                if (fromUser) { try { currentParameters.put("temperature", progress); updateDeviceParameters(); } catch (Exception e) {} }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
     }
-
     private void loadDeviceData() {
-        SupabaseApi api = ApiClient.getApi();
-        api.getDevices(roomId).enqueue(new Callback<List<Device>>() {
-            @Override
-            public void onResponse(Call<List<Device>> call, Response<List<Device>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    for (Device d : response.body()) {
-                        if (d.id == deviceId) {
-                            currentDevice = d;
-                            switchDishwasher.setChecked(d.is_on);
-                            textDishwasherStatus.setText(d.is_on ? "Включено" : "Выключено");
-                            seekBarMode.setProgress(d.mode);
-                            updateModeText(d.mode);
-                            seekBarTemp.setProgress(d.temperature);
-                            textTempValue.setText(d.temperature + "°C");
-                            break;
+        supabaseClient.getDeviceById(String.valueOf(deviceId), new SupabaseClient.SupabaseCallback() {
+            @Override public void onSuccess(int code, String response) {
+                runOnUiThread(() -> {
+                    try {
+                        org.json.JSONArray arr = new org.json.JSONArray(response);
+                        if (arr.length() > 0) {
+                            org.json.JSONObject dev = arr.getJSONObject(0);
+                            boolean work = dev.getBoolean("work");
+                            String paramsStr = dev.getString("parameters");
+                            currentParameters = new org.json.JSONObject(paramsStr);
+                            int mode = currentParameters.optInt("mode", 50);
+                            int temperature = currentParameters.optInt("temperature", 50);
+                            switchDishwasher.setChecked(work);
+                            textDishwasherStatus.setText(work ? "Включено" : "Выключено");
+                            seekBarMode.setProgress(mode);
+                            textModeValue.setText(mode < 33 ? "Экономичный" : (mode < 66 ? "Стандартный" : "Интенсивный"));
+                            seekBarTemp.setProgress(temperature);
+                            textTempValue.setText(temperature + "°C");
                         }
-                    }
-                }
+                    } catch (Exception e) { e.printStackTrace(); }
+                });
             }
-            @Override
-            public void onFailure(Call<List<Device>> call, Throwable t) {
-                showError("Ошибка загрузки данных устройства");
-            }
+            @Override public void onError(String error) { showError("Ошибка загрузки"); }
         });
     }
-
-    private void updateDevice() {
-        SupabaseApi api = ApiClient.getApi();
-        api.updateDevice(deviceId, currentDevice).enqueue(new Callback<Void>() {
-            @Override public void onResponse(Call<Void> call, Response<Void> response) {}
-            @Override public void onFailure(Call<Void> call, Throwable t) {
-                showError("Не удалось сохранить изменения");
-            }
+    private void updateDeviceWork(boolean isChecked) {
+        supabaseClient.updateDeviceWorkStatus(String.valueOf(deviceId), isChecked, new SupabaseClient.SupabaseCallback() {
+            @Override public void onSuccess(int code, String resp) { runOnUiThread(() -> textDishwasherStatus.setText(isChecked ? "Включено" : "Выключено")); }
+            @Override public void onError(String error) { runOnUiThread(() -> { switchDishwasher.setChecked(!isChecked); showError("Не удалось изменить состояние"); }); }
         });
     }
-
-    private void updateModeText(int progress) {
-        if (progress < 33) textModeValue.setText("Экономичный");
-        else if (progress < 66) textModeValue.setText("Стандартный");
-        else textModeValue.setText("Интенсивный");
+    private void updateDeviceParameters() {
+        supabaseClient.updateDeviceParameters(String.valueOf(deviceId), currentParameters.toString(), new SupabaseClient.SupabaseCallback() {
+            @Override public void onSuccess(int code, String resp) { }
+            @Override public void onError(String error) { runOnUiThread(() -> showError("Не удалось сохранить параметры")); }
+        });
     }
-
     private void showError(String msg) {
-        new AlertDialog.Builder(this)
-                .setTitle("Ошибка")
-                .setMessage(msg)
-                .setPositiveButton("OK", null)
-                .setCancelable(false)
-                .show();
+        new AlertDialog.Builder(this).setTitle("Ошибка").setMessage(msg).setPositiveButton("OK", null).setCancelable(false).show();
     }
 }
