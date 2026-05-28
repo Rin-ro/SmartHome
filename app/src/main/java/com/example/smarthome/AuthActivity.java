@@ -60,9 +60,9 @@ public class AuthActivity extends AppCompatActivity {
                                         .apply();
 
                                 if (userAddress.isEmpty()) {
-                                    startActivity(new Intent(AuthActivity.this, AddAddressActivity.class));
+                                    startActivity(new Intent(AuthActivity.this, PinCreateActivity.class));
                                 } else {
-                                    startActivity(new Intent(AuthActivity.this, MainActivity.class));
+                                    startActivity(new Intent(AuthActivity.this, PinLoginActivity.class));
                                 }
                                 finish();
                             } else {
