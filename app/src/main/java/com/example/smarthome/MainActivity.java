@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadRooms();
-        loadAddress(); // обновляем адрес
+        loadAddress();
     }
 
     private void loadAddress() {
