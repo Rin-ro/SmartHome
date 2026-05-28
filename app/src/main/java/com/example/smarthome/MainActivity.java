@@ -31,9 +31,7 @@ public class MainActivity extends AppCompatActivity {
         supabaseClient = SupabaseClient.getInstance();
         SharedPreferences prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
         userId = prefs.getString("user_id", "");
-        String address = prefs.getString("user_address", "");
         addressTextView = findViewById(R.id.addressTextView);
-        addressTextView.setText(address.isEmpty() ? "Адрес не указан" : address);
         recyclerView = findViewById(R.id.roomsRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         roomsList = new ArrayList<>();
@@ -55,6 +53,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadRooms();
+        loadAddress(); // обновляем адрес
+    }
+
+    private void loadAddress() {
+        SharedPreferences prefs = getSharedPreferences("smart_home_prefs", MODE_PRIVATE);
+        String address = prefs.getString("user_address", "");
+        addressTextView.setText(address.isEmpty() ? "Адрес не указан" : address);
     }
 
     private void loadRooms() {

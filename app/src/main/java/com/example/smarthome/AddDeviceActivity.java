@@ -35,6 +35,12 @@ public class AddDeviceActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.listDevice);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         deviceTypesList = new ArrayList<>();
+        // Добавляем все типы устройств
+        deviceTypesList.add(new DeviceTypes("Свет", 101)); // неактивный
+        deviceTypesList.add(new DeviceTypes("Температура", 102));
+        deviceTypesList.add(new DeviceTypes("Вентилятор", 103));
+        deviceTypesList.add(new DeviceTypes("Вытяжка", 104));
+        deviceTypesList.add(new DeviceTypes("Кондиционер", 105));
         deviceTypesList.add(new DeviceTypes("Кофеварка", 1));
         deviceTypesList.add(new DeviceTypes("Посудомоечная машина", 2));
         adapter = new DeviceTypeAdapter(deviceTypesList, position -> {
@@ -50,6 +56,11 @@ public class AddDeviceActivity extends AppCompatActivity {
         String deviceUid = editDeviceId.getText().toString().trim();
         if (deviceName.isEmpty() || deviceUid.isEmpty()) { Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show(); return; }
         if (selectedDeviceTypeId == -1) { Toast.makeText(this, "Выберите тип", Toast.LENGTH_SHORT).show(); return; }
+        // Проверяем, что выбранный тип – кофеварка (1) или посудомойка (2)
+        if (selectedDeviceTypeId != 1 && selectedDeviceTypeId != 2) {
+            Toast.makeText(this, "Можно добавить только кофеварку или посудомойку", Toast.LENGTH_SHORT).show();
+            return;
+        }
         deviceName = deviceName.substring(0,1).toUpperCase() + deviceName.substring(1).toLowerCase();
         String parameters = "";
         try {

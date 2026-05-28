@@ -135,12 +135,12 @@
             android:orientation="vertical"
             android:padding="16dp">
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSave"
-                android:layout_width="170dp"
+                android:id="@+id/btnEditSave"
+                android:layout_width="180dp"
                 android:layout_height="60dp"
                 android:layout_gravity="center_horizontal"
                 android:backgroundTint="#0D47A1"
-                android:text="Сохранить"
+                android:text="Редактировать"
                 android:textColor="#FFFFFF"
                 app:cornerRadius="10dp"
                 android:textSize="18sp"
