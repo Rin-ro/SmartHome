@@ -1,9 +1,14 @@
 package com.example.smarthome;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
+import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,11 +16,11 @@ import androidx.appcompat.widget.SwitchCompat;
 import org.json.JSONObject;
 
 public class DeviceCoffeeActivity extends AppCompatActivity {
-
-    private SwitchCompat switchCoffee;
-    private SeekBar seekStrength, seekVolume;
-    private RadioGroup radioGroupCoffeeType;
-    private TextView textStrength, textVolume, statusText;
+    private SwitchCompat switchCoffee, switchPreWet;
+    private SeekBar seekStrength, seekVolume, seekTemp;
+    private RadioGroup radioGroupGrind;
+    private Spinner spinnerPortions;
+    private TextView textStrength, textVolume, textTemp, statusText;
     private int deviceId, roomId;
     private SupabaseClient supabaseClient;
     private JSONObject currentParameters = new JSONObject();
@@ -28,42 +33,73 @@ public class DeviceCoffeeActivity extends AppCompatActivity {
         deviceId = getIntent().getIntExtra("device_id", -1);
         roomId = getIntent().getIntExtra("room_id", -1);
         if (deviceId == -1 || roomId == -1) { finish(); return; }
+
         switchCoffee = findViewById(R.id.switchCoffee);
+        switchPreWet = findViewById(R.id.switchPreWet);
         seekStrength = findViewById(R.id.seekBarStrength);
         seekVolume = findViewById(R.id.seekBarVolume);
-        radioGroupCoffeeType = findViewById(R.id.radioGroupCoffeeType);
+        seekTemp = findViewById(R.id.seekBarTemp);
+        radioGroupGrind = findViewById(R.id.radioGroupGrind);
+        spinnerPortions = findViewById(R.id.spinnerPortions);
         textStrength = findViewById(R.id.textStrengthValue);
         textVolume = findViewById(R.id.textVolumeValue);
+        textTemp = findViewById(R.id.textTempValue);
         statusText = findViewById(R.id.textCoffeeStatus);
         ImageView back = findViewById(R.id.btnBack);
         back.setOnClickListener(v -> finish());
 
+        // Spinner порций
+        ArrayAdapter<CharSequence> portionsAdapter = ArrayAdapter.createFromResource(this,
+                R.array.portions, android.R.layout.simple_spinner_item);
+        portionsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerPortions.setAdapter(portionsAdapter);
+
         loadDeviceData();
 
         switchCoffee.setOnCheckedChangeListener((btn, isChecked) -> updateDeviceWork(isChecked));
-        seekStrength.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        seekStrength.setOnSeekBarChangeListener(createSeekListener("strength", textStrength));
+        seekVolume.setOnSeekBarChangeListener(createSeekListener("volume", textVolume));
+        seekTemp.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                textStrength.setText(progress + "%");
-                if (fromUser) { try { currentParameters.put("strength", progress); updateDeviceParameters(); } catch (Exception e) {} }
+                int temp = 70 + progress; // диапазон 70-90
+                textTemp.setText(temp + "°C");
+                if (fromUser) {
+                    try { currentParameters.put("temperature", temp); updateDeviceParameters(); } catch (Exception e) {}
+                }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
-        seekVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        radioGroupGrind.setOnCheckedChangeListener((group, checkedId) -> {
+            String grind = "";
+            if (checkedId == R.id.radioGrindFine) grind = "fine";
+            else if (checkedId == R.id.radioGrindMedium) grind = "medium";
+            else if (checkedId == R.id.radioGrindCoarse) grind = "coarse";
+            try { currentParameters.put("grind", grind); updateDeviceParameters(); } catch (Exception e) {}
+        });
+        switchPreWet.setOnCheckedChangeListener((btn, isChecked) -> {
+            try { currentParameters.put("preWet", isChecked); updateDeviceParameters(); } catch (Exception e) {}
+        });
+        spinnerPortions.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+                try { currentParameters.put("portions", pos + 1); updateDeviceParameters(); } catch (Exception e) {}
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
+    private SeekBar.OnSeekBarChangeListener createSeekListener(String key, TextView tv) {
+        return new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                textVolume.setText(progress + " мл");
-                if (fromUser) { try { currentParameters.put("volume", progress); updateDeviceParameters(); } catch (Exception e) {} }
+                String suffix = key.equals("volume") ? " мл" : "%";
+                tv.setText(progress + suffix);
+                if (fromUser) {
+                    try { currentParameters.put(key, progress); updateDeviceParameters(); } catch (Exception e) {}
+                }
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) {}
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-        radioGroupCoffeeType.setOnCheckedChangeListener((group, checkedId) -> {
-            String coffeeType = "";
-            if (checkedId == R.id.radioEspresso) coffeeType = "espresso";
-            else if (checkedId == R.id.radioAmericano) coffeeType = "americano";
-            else if (checkedId == R.id.radioCappuccino) coffeeType = "cappuccino";
-            try { currentParameters.put("coffeeType", coffeeType); updateDeviceParameters(); } catch (Exception e) {}
-        });
+        };
     }
 
     private void loadDeviceData() {
@@ -79,16 +115,25 @@ public class DeviceCoffeeActivity extends AppCompatActivity {
                             currentParameters = new org.json.JSONObject(paramsStr);
                             int strength = currentParameters.optInt("strength", 50);
                             int volume = currentParameters.optInt("volume", 200);
-                            String coffeeType = currentParameters.optString("coffeeType", "espresso");
+                            int temperature = currentParameters.optInt("temperature", 90);
+                            String grind = currentParameters.optString("grind", "medium");
+                            boolean preWet = currentParameters.optBoolean("preWet", false);
+                            int portions = currentParameters.optInt("portions", 1);
                             switchCoffee.setChecked(work);
                             statusText.setText(work ? "Включено" : "Выключено");
                             seekStrength.setProgress(strength);
                             textStrength.setText(strength + "%");
                             seekVolume.setProgress(volume);
                             textVolume.setText(volume + " мл");
-                            if (coffeeType.equals("espresso")) radioGroupCoffeeType.check(R.id.radioEspresso);
-                            else if (coffeeType.equals("americano")) radioGroupCoffeeType.check(R.id.radioAmericano);
-                            else if (coffeeType.equals("cappuccino")) radioGroupCoffeeType.check(R.id.radioCappuccino);
+                            int tempProgress = temperature - 70;
+                            if (tempProgress < 0) tempProgress = 0;
+                            seekTemp.setProgress(tempProgress);
+                            textTemp.setText(temperature + "°C");
+                            if (grind.equals("fine")) radioGroupGrind.check(R.id.radioGrindFine);
+                            else if (grind.equals("coarse")) radioGroupGrind.check(R.id.radioGrindCoarse);
+                            else radioGroupGrind.check(R.id.radioGrindMedium);
+                            switchPreWet.setChecked(preWet);
+                            spinnerPortions.setSelection(portions - 1);
                         }
                     } catch (Exception e) { e.printStackTrace(); }
                 });

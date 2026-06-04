@@ -14,13 +14,29 @@
         android:layout_height="72dp"
         android:src="@drawable/kitchen_blue1" />
 
-    <TextView
-        android:id="@+id/roomNameTextView"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Комната"
-        android:textColor="@color/blue_selected"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginStart="16dp" />
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="16dp">
+
+        <TextView
+            android:id="@+id/roomNameTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Комната"
+            android:textColor="@color/blue_selected"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/roomTypeTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Тип комнаты"
+            android:textSize="12sp"
+            android:textColor="#757575"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
 </LinearLayout>

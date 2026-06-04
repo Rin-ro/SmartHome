@@ -35,12 +35,17 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.roomsRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         roomsList = new ArrayList<>();
+
+        // Исправленный адаптер: передаём id и название комнаты
         adapter = new MainAdapter(this, roomsList, position -> {
             int roomId = roomsList.get(position).room_id;
+            String roomName = roomsList.get(position).name_room;
             Intent intent = new Intent(MainActivity.this, DevicesActivity.class);
             intent.putExtra("idRoom", roomId);
+            intent.putExtra("room_name", roomName);
             startActivity(intent);
         });
+
         recyclerView.setAdapter(adapter);
         FloatingActionButton fabAddRoom = findViewById(R.id.fabAddRoom);
         fabAddRoom.setOnClickListener(v -> startActivity(new Intent(this, AddRoomActivity.class)));

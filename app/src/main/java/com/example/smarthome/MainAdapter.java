@@ -12,13 +12,10 @@ import java.util.List;
 
 public class MainAdapter extends RecyclerView.Adapter<MainAdapter.MainViewHolder> {
     private int[] Pictures = {
-            R.drawable.living_blue1,   // 1
-            R.drawable.kitchen_blue1,  // 2
-            R.drawable.bathroom_blue1, // 3
-            R.drawable.office_blue1,   // 4
-            R.drawable.beg_blue1,      // 5
-            R.drawable.tv_blue1,       // 6
-            R.drawable.logo_room_blue  // 7
+            R.drawable.living_blue1, R.drawable.kitchen_blue1,
+            R.drawable.bathroom_blue1, R.drawable.office_blue1,
+            R.drawable.beg_blue1, R.drawable.tv_blue1,
+            R.drawable.logo_room_blue
     };
     private List<Room> roomsList;
     private OnItemClickListener listener;
@@ -44,8 +41,8 @@ public class MainAdapter extends RecyclerView.Adapter<MainAdapter.MainViewHolder
     @Override
     public void onBindViewHolder(@NonNull MainViewHolder holder, int position) {
         Room room = roomsList.get(position);
-        holder.textViewName.setText(room.name_room);
-        // image_room в БД начинается с 1, а массив с 0 – вычитаем 1
+        holder.roomName.setText(room.name_room);
+        holder.roomType.setText(room.name_type);
         int iconIndex = room.image_room - 1;
         if (iconIndex < 0 || iconIndex >= Pictures.length) iconIndex = 0;
         holder.imageView.setImageResource(Pictures[iconIndex]);
@@ -59,11 +56,12 @@ public class MainAdapter extends RecyclerView.Adapter<MainAdapter.MainViewHolder
 
     public static class MainViewHolder extends RecyclerView.ViewHolder {
         ImageView imageView;
-        TextView textViewName;
+        TextView roomName, roomType;
         public MainViewHolder(@NonNull View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.roomIconImageView);
-            textViewName = itemView.findViewById(R.id.roomNameTextView);
+            roomName = itemView.findViewById(R.id.roomNameTextView);
+            roomType = itemView.findViewById(R.id.roomTypeTextView);
         }
     }
 }

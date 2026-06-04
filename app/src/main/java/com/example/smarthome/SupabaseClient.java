@@ -96,6 +96,14 @@ public class SupabaseClient {
         String url = SUPABASE_URL + "/rest/v1/rooms?select=room_id,name_room,type_id,room_types(name_type,image_type)&user_id=eq." + userId;
         executeRequest("GET", url, null, callback);
     }
+    // Добавление нового типа комнаты
+    public void addRoomType(JSONObject roomTypeData, SupabaseCallback callback) {
+        String url = SUPABASE_URL + "/rest/v1/room_types";
+        executeRequest("POST", url, roomTypeData, callback);
+    }
+
+    // getRoomTypes уже есть, но он должен возвращать все типы (стандартные + пользовательские)
+// Ваш текущий getRoomTypes делает это через or=(user_id.is.null,user_id.eq.userId) – это правильно.
     public void getRoomTypes(String userId, SupabaseCallback callback) {
         String url = SUPABASE_URL + "/rest/v1/room_types?select=*&or=(user_id.is.null,user_id.eq." + userId + ")";
         executeRequest("GET", url, null, callback);

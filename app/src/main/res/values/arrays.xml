@@ -6,4 +6,16 @@
         <item>2 часа</item>
         <item>3 часа</item>
     </string-array>
+    <string-array name="programs">
+        <item>Автоматическая</item>
+        <item>Экономичная (Eco)</item>
+        <item>Интенсивная</item>
+        <item>Быстрая 30 мин</item>
+        <item>Стекло</item>
+    </string-array>
+    <string-array name="portions">
+        <item>1 порция</item>
+        <item>2 порции</item>
+        <item>3 порции</item>
+    </string-array>
 </resources>

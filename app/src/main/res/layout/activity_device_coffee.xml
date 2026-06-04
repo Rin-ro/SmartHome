@@ -13,14 +13,11 @@
         android:background="#2C353D"
         android:padding="16dp"
         android:gravity="center_vertical">
-
         <ImageView
             android:id="@+id/btnBack"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:src="@drawable/back_butt"
-            android:contentDescription="Назад" />
-
+            android:src="@drawable/back_butt" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -31,16 +28,14 @@
             android:layout_marginStart="16dp" />
     </LinearLayout>
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Карточка включения/выключения -->
+            <!-- Вкл/Выкл -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -161,7 +156,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Тип кофе (RadioGroup) -->
+            <!-- Помол (RadioGroup) -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -176,30 +171,126 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Тип кофе"
+                        android:text="Степень помола"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                     <RadioGroup
-                        android:id="@+id/radioGroupCoffeeType"
+                        android:id="@+id/radioGroupGrind"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp">
                         <RadioButton
-                            android:id="@+id/radioEspresso"
+                            android:id="@+id/radioGrindFine"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Эспрессо" />
+                            android:text="Мелкий" />
                         <RadioButton
-                            android:id="@+id/radioAmericano"
+                            android:id="@+id/radioGrindMedium"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Американо" />
+                            android:text="Средний" />
                         <RadioButton
-                            android:id="@+id/radioCappuccino"
+                            android:id="@+id/radioGrindCoarse"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Капучино" />
+                            android:text="Крупный" />
                     </RadioGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Предварительное смачивание (Switch) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="4dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:weightSum="1">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Предварительное смачивание"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switchPreWet"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Температура воды -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="4dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Температура воды (°C)"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/textTempValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="90°C"
+                        android:textSize="14sp"
+                        android:textColor="#757575"
+                        android:layout_marginBottom="8dp" />
+                    <SeekBar
+                        android:id="@+id/seekBarTemp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="20"
+                        android:progress="10"
+                        android:progressTint="#0D47A1"
+                        android:thumbTint="#0D47A1" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Количество порций (Spinner) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="4dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Количество порций"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <Spinner
+                        android:id="@+id/spinnerPortions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
